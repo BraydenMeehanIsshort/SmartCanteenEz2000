@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Smart Canteen</title>
+  <meta name="google-signin-client_id" content="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="text/javascript" src="https://cdn.emailjs.com/sdk/3.2.0/email.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 0; background: #f4f4f4; color: #333; }
+    header { background: #2a9d8f; color: white; padding: 1em; text-align: center; }
+    nav a { margin: 0 10px; color: white; text-decoration: none; cursor: pointer; }
+    main { padding: 20px; }
+    .hidden { display: none; }
+    form { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: auto; }
+    form label, form select, form input { display: block; width: 100%; margin-bottom: 10px; }
+    button, input[type="submit"] { background: #2a9d8f; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Smart Canteen</h1>
+  <nav>
+    <a onclick="show('order')">Order</a>
+    <a onclick="show('admin')">Admin</a>
+    <a onclick="signOut()">Sign Out</a>
+  </nav>
+</header>
+
+<main>
+  <div id="login"></div>
+
+  <section id="order" class="hidden">
+    <h2>Place Your Order</h2>
+    <form id="orderForm">
+      <label for="item">Select Item:</label>
+      <select id="item" name="item">
+        <option value="Sandwich">Sandwich - $5</option>
+        <option value="Pizza">Pizza - $6</option>
+        <option value="Drink">Drink - $2</option>
+      </select>
+      <label for="quantity">Quantity:</label>
+      <input type="number" id="quantity" name="quantity" value="1" min="1" />
+      <input type="submit" value="Order" />
+    </form>
+    <div id="confirm"></div>
+  </section>
+
+  <section id="admin" class="hidden">
+    <h2>Admin Dashboard</h2>
+    <p>You'll receive email notifications whenever a student places an order.</p>
+  </section>
+</main>
+
+<script>
+  // Initialize EmailJS (replace these with your actual service/template/user IDs)
+  emailjs.init('YOUR_EMAILJS_USER_ID');
+
+  function show(page) {
+    ['order','admin'].forEach(id => {
+      document.getElementById(id).classList.toggle('hidden', id !== page);
+    });
+  }
+
+  function handleCredentialResponse(response) {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    const email = payload.email;
+    const domain = email.split('@')[1];
+
+    document.getElementById('login').innerHTML =
+      `<p>Signed in as <strong>${email}</strong></p>`;
+
+    if (domain === 'school.nz') {
+      show('admin');
+    } else {
+      show('order');
+    }
+  }
+
+  window.onload = () => {
+    google.accounts.id.initialize({
+      client_id: document.querySelector('meta[name="google-signin-client_id"]').content,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('login'),
+      { theme: 'outline', size: 'large' }
+    );
+    google.accounts.id.prompt();
+  };
+
+  document.getElementById('orderForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const item = e.target.item.value;
+    const qty = e.target.quantity.value;
+    const body = `New order:\n${qty} × ${item}`;
+
+    emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', {
+      to_email: 'admin@school.nz',
+      message: body
+    }).then(() => {
+      document.getElementById('confirm').innerText =
+        `✅ Order placed: ${qty} x ${item}`;
+      e.target.reset();
+    }, (err) => {
+      document.getElementById('confirm').innerText =
+        `⚠️ Error sending notification.`;
+      console.error(err);
+    });
+  });
+
+  function signOut() {
+    google.accounts.id.disableAutoSelect();
+    location.reload();
+  }
+</script>
+
+</body>
+</html>
